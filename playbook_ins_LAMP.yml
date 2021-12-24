@@ -1,0 +1,110 @@
+---
+- name   : Installation LAMP und herunterladen die Datein
+  hosts  : STAGING_SERVERS_WEB 
+  become : yes
+
+  vars_files:
+  - group-vars/default.yml
+
+  tasks:
+  - name : Prufen und Druken Linux version
+    debug: var=ansible_os_family
+
+  - block:      # === Block für Debian===
+
+      - name: Installieren der Apache Server für Debian
+        apt: name=apache2 state=latest
+
+      - name: Erschaffen das Dokument root
+        file:
+          path  : "/var/www/{{ http_host }}"
+          state : directory
+          owner : "{{ app_user }}"
+          mode  : 0755 
+      
+      - name: Kopieren die index test Seite
+        template:
+          src  : "files/index.html.j2"
+          dest : "/var/www/{{ http_host }}/index.html"
+
+      - name: Eingerichten der Apache VirtualHost
+        template:
+          src  : "files/apache.conf.j2"
+          dest : "/etc/apache2/site-available/{{ http_conf }}"
+
+      - name: Aktivieren neue Site
+        shell  : /usr/sbin/a2ensite {{ http_conf }}
+        notify : Reload Apache
+
+      - name: Deaktivieren die standart Apache Site
+        shell  : /usr/sbin/a2dissite 000-default.conf
+        when   : disable_default
+        notify : Restart Apache 
+
+    when: ansible_os_family == "Debian" 
+  
+  - block:      # === Block für RegHat ===
+
+      - name: Installieren der EPEL-repository
+        yum: name=epel-release state=latest      
+
+      - name: Installieren der Ngix für CentOS
+        yum: name=nginx state=latest
+
+      - name: Erschaffen das dokument root
+        file:
+          path  : "/var/www/{{ http_host }}/html"
+          state : directory
+          owner : "{{ app_user }}"
+          mode  : 0755
+
+      - name: Kopieren die index test Seite
+        template:
+          src  : "files/nginx.conf.j2"
+          dest : "/var/www/{{ http_host }}/html/index.html"
+
+      - name: Eingerichten der Nginx VirtualHost
+        template:
+          src  : "files/nginx.conf.j2"
+          dest : "/etc/nginx/sites-available/{{ http_host }}"
+
+      - name: Aktivieren neue Site
+        shell  : ln -s /etc/nginx/sites-available/{{ http_host }} /etc/nginx/sites-enabled/
+        notify : Reload Nginx
+
+      - name: Deaktivieren die standart Nginx Site
+        shell  : rm /etc/nginx/sites-enabled/default
+        notify : Restart Nginx
+ 
+    when: ansible_os_family == "RedHat"
+
+  - block:      # === Block für Windows ===
+
+      - name: Installieren der IIS Web-Server mit den Funktionen und den vervaltungs Tool
+        win_feature:
+           name  : 
+           - Web-Server
+           - Web-Common-Http
+           state : present
+           include_sub_features    : yes
+           include_managment_tools : yes
+        register: win_feature
+
+      - name: Reboot wenn Installirung Web-Server hat ein Bestätigung
+        win_reboot:
+        when: win_feature.reboot_required
+
+    when: ansible_os_family == "Windows"
+
+  handlers:
+  - name: Reload Apache
+    service: name=apache2 state=reloaded
+
+  - name: Restart Apache
+    service: name=apache2 state=restarted
+
+  - name: Reload Nginx
+    service: name=nginx state=reloaded
+
+  - name: Restart Nginx
+    service: name=nginx state=restarted

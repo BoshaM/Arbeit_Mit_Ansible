@@ -1,6 +1,0 @@
----
- app_user        : "webadmin"
- http_host       : "haustest"
- http_conf       : "haustest.conf"
- http_port       : "80"
- disable_default : true
