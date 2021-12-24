@@ -42,13 +42,6 @@
         notify : Restart Apache 
 
     when: ansible_os_family == "Debian" 
-
-  handlers:
-  - name: Reload Apache
-    service: name=apache2 state=reloaded
-
-  - name: Restart Apache
-    service: name=apache2 state=restarted
   
   - block:      # === Block für RegHat ===
 
@@ -57,5 +50,43 @@
 
       - name: Installieren der Ngix für CentOS
         yum: name=nginx state=latest
-  
+
+      - name: Erschaffen das dokument root
+        file:
+          path  : "/var/www/{{ http_host }}/html"
+          state : directory
+          owner : "{{ app_user }}"
+          mode  : 0755
+
+      - name: Kopieren die index test Seite
+        template:
+          src  : "files/nginx.conf.j2"
+          dest : "/var/www/{{ http_host }}/html/index.html"
+
+      - name: Eingerichten der Nginx VirtualHost
+        template:
+          src  : "files/nginx.conf.j2"
+          dest : "/etc/nginx/sites-available/{{ http_host }}"
+
+      - name: Aktivieren neue Site
+        shell  : ln -s /etc/nginx/sites-available/{{ http_host }} /etc/nginx/sites-enabled/
+        notify : Reload Nginx
+
+      - name: Deaktivieren die standart Nginx Site
+        shell  : rm /etc/nginx/sites-enabled/default
+        notify : Restart Nginx
+ 
     when: ansible_os_family == "RedHat"
+
+  handlers:
+  - name: Reload Apache
+    service: name=apache2 state=reloaded
+
+  - name: Restart Apache
+    service: name=apache2 state=restarted
+
+  - name: Reload Nginx
+    service: name=nginx state=reloaded
+
+  - name: Restart Nginx
+    service: name=nginx state=restarted
