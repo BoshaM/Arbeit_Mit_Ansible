@@ -78,6 +78,22 @@
  
     when: ansible_os_family == "RedHat"
 
+  - block:      # === Block für Windows ===
+
+      - name: Installieren der IIS Web-Server mit den Funktionen und den vervaltungs Tool
+        win_feature:
+           name  : Web-Server
+           state : present
+           include_sub_features    : yes
+           include_managment_tools : yes
+        register: win_feature
+
+      - name: Reboot wenn Installirung Web-Server hat ein Bestätigung
+        win_reboot:
+        when: win_feature.reboot_required
+
+    when: ansible_os_family == "Windows"
+
   handlers:
   - name: Reload Apache
     service: name=apache2 state=reloaded
