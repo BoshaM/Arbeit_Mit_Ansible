@@ -1,0 +1,52 @@
+---
+- name   : Installation LAMP und herunterladen die Datein
+  hosts  : STAGING_SERVERS_WEB 
+  become : yes
+
+  vars_files:
+  - group-vars/default.yml
+
+  tasks:
+  - name : Prufen und Druken Linux version
+    debug: var=ansible_os_family
+
+  - block:      # === Block für Debian===
+
+      - name: Installieren der Apache Server für Debian
+        apt: name=apache2 state=latest
+
+      - name: Erschaffen das Dokument root
+        file:
+          path  : "/var/www/{{ http_host }}"
+          state : directory
+          owner : "{{ app_user }}"
+          mode  : 0755 
+      
+      - name: Kopieren die index test Seite
+        template:
+          src  : "files/index.html.j2"
+          dest : "/var/www/{{ http_host }}/index.html"
+
+      - name: Eingerichten der Apache VirtualHost
+        template:
+          src  : "files/apache.conf.j2"
+          dest : "/etc/apache2/site-available/{{ http_conf }}"
+
+      - name: Aktivieren neue Site
+        shell  : /usr/sbin/a2ensite {{ http_conf }}
+        notify : Reload Apache
+
+      - name: Deaktivieren die standart Apache Site
+        shell  : /usr/sbin/a2dissite 000-default.conf
+        when   : disable_default
+        notify : Restart Apache 
+
+    when: ansible_os_family == "Debian" 
+
+  handlers:
+  - name: Reload Apache
+    service: name=apache2 state=reloaded
+
+  - name: Restart Apache
+    service: name=apache2 state=restarted
+  
