@@ -50,3 +50,12 @@
   - name: Restart Apache
     service: name=apache2 state=restarted
   
+  - block:      # === Block für RegHat ===
+
+      - name: Installieren der EPEL-repository
+        yum: name=epel-release state=latest      
+
+      - name: Installieren der Ngix für CentOS
+        yum: name=nginx state=latest
+  
+    when: ansible_os_family == "RedHat"
