@@ -82,7 +82,9 @@
 
       - name: Installieren der IIS Web-Server mit den Funktionen und den vervaltungs Tool
         win_feature:
-           name  : Web-Server
+           name  : 
+           - Web-Server
+           - Web-Common-Http
            state : present
            include_sub_features    : yes
            include_managment_tools : yes
