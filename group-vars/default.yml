@@ -1,0 +1,6 @@
+---
+ app_user        : "webadmin"
+ http_host       : "myhaus"
+ http_conf       : "myhaus.conf"
+ http_port       : "80"
+ disable_default : true
